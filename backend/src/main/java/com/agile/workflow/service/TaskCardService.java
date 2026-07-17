@@ -28,16 +28,19 @@ public class TaskCardService {
     private final ColumnBlockRepository columnBlockRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final EmailService emailService;
 
     @Autowired
     public TaskCardService(TaskCardRepository taskCardRepository, 
                            ColumnBlockRepository columnBlockRepository,
                            UserRepository userRepository,
-                           NotificationService notificationService) {
+                           NotificationService notificationService,
+                           EmailService emailService) {
         this.taskCardRepository = taskCardRepository;
         this.columnBlockRepository = columnBlockRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.emailService = emailService;
     }
 
     private void validateWorkspaceAccess(Workspace workspace, Long userId) {
@@ -105,11 +108,22 @@ public class TaskCardService {
             task.setAssignee(assignee);
         }
         
-        return taskCardRepository.save(task);
+        TaskCard savedTask = taskCardRepository.save(task);
+
+        if (savedTask.getAssignee() != null) {
+            try {
+                emailService.sendTaskAssignedEmail(savedTask.getAssignee(), savedTask);
+            } catch (Exception e) {
+                System.err.println("Task assigned email dispatch error: " + e.getMessage());
+            }
+        }
+
+        return savedTask;
     }
 
     public TaskCard updateTask(Long id, TaskCard details, Long userId) {
         TaskCard task = getTaskById(id, userId);
+        User previousAssignee = task.getAssignee();
         
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new EntityNotFoundException("User not found"));
@@ -130,7 +144,18 @@ public class TaskCardService {
             task.setAssignee(null);
         }
 
-        return taskCardRepository.save(task);
+        TaskCard updatedTask = taskCardRepository.save(task);
+
+        // Notify newly assigned user if assignee changed or set
+        if (updatedTask.getAssignee() != null && (previousAssignee == null || !previousAssignee.getId().equals(updatedTask.getAssignee().getId()))) {
+            try {
+                emailService.sendTaskAssignedEmail(updatedTask.getAssignee(), updatedTask);
+            } catch (Exception e) {
+                System.err.println("Task assigned email dispatch error: " + e.getMessage());
+            }
+        }
+
+        return updatedTask;
     }
 
     public void deleteTask(Long id, Long userId) {
@@ -466,10 +491,16 @@ public class TaskCardService {
         }
         taskCardRepository.saveAll(todoTasks);
 
-        // Notify Developer and Admin
+        // Notify Developer and Admin via App Notification
         String msg = String.format("Task '%s' has been rejected by %s and sent back to To Do.", task.getTitle(), user.getUsername());
         if (task.getAssignee() != null) {
             notificationService.createNotification(msg, task.getAssignee().getId());
+            // Dispatch email notification to assigned Developer
+            try {
+                emailService.sendTaskRejectedEmail(task.getAssignee(), task, user);
+            } catch (Exception e) {
+                System.err.println("Task rejected email dispatch error: " + e.getMessage());
+            }
         }
         if (workspace.getCreator() != null && !workspace.getCreator().getId().equals(userId)) {
             notificationService.createNotification(msg, workspace.getCreator().getId());

@@ -1,90 +1,102 @@
 # Agile Workflow Engine 🚀
 
-A premium, role-based Agile Kanban Workspace platform engineered with a React (Vite) frontend and a Spring Boot (Java) REST API backend. It features workspace isolation, custom role constraints, confirmation guards, and real-time docked notification alerts.
+A full-stack, enterprise-grade Agile Kanban Workspace platform built with **React (Vite)** on the frontend and **Spring Boot (Java 17)** on the backend. Designed with glassmorphism aesthetics, workspace isolation, role-based access control (RBAC), live WebSocket updates, and email OTP security.
 
 ---
 
-## 🛠️ Technology Stack
+## 🛠️ Technology Stack & Architecture
 
-*   **Frontend**: React (JS), Vite, Lucide Icons, Glassmorphic CSS Styling
-*   **Backend**: Spring Boot, Spring Data JPA, H2 Database (In-Memory), Lombok
-*   **API Mappings**: REST JSON Endpoints (CORS enabled)
-
----
-
-## ✨ Features & Capabilities
-
-### 1. Multi-Tenant Workspace Isolation
-*   Users can create multiple workspaces.
-*   Workspaces are isolated; members only see data inside boards they have been explicitly invited to by the workspace creator.
-
-### 2. Strict Role-Based Access Controls (RBAC)
-*   **Workspace Admin**: Can rename/delete workspaces, add columns, create and edit tasks, invite members, and delete users from the system.
-*   **Contributor (Developer)**: Can move task cards assigned to them from **To Do** to **In Progress** or **In Progress** to **Done**. Property editing and creating cards are locked.
-*   **Quality Assurance (QA)**: Reviews cards dropped in **Done** and can either **Approve** (finalize) or **Reject** them (throwing them back to the **To Do** column).
-
-### 3. Developer Done Drag Confirmation
-*   Before a developer drags a card into the `Done` column, a confirmation pop-up warns them that it requires QA validation.
-
-### 4. Real-Time Notification Alerts & Docked Sidebar
-*   Real-time notifications are generated when a QA Auditor approves or rejects tasks, alerting both the developer (assignee) and the administrator (workspace creator).
-*   A responsive **Notification Sidebar** slides open from the right side of the screen when clicking the Bell icon, dynamically adjusting the Kanban board's size side-by-side with no screen overlaps.
-*   Features active polling with automated deduplication guards.
-
-### 5. Administrative User Management
-*   Administrators can delete users globally from the members modal.
-*   **Cascading Soft Deletion**: Automatically unassigns the deleted user from all task cards and cleans up their workspace memberships.
-*   Workspace admins are protected from deletion to avoid system lockouts.
+*   **Frontend**: React, Vite, Custom HSL/HEX Design System, Lucide Icons, Native WebSockets
+*   **Backend**: Spring Boot 3, Spring Data JPA, MySQL (with H2 fallback), Hibernate, WebSocket Handler
+*   **Database**: MySQL 8 / H2 Persistent Database
+*   **DevOps**: Docker, Docker Compose, Nginx, PowerShell Automation
 
 ---
 
-## 🚀 Getting Started
+## 🎨 Custom Design Palette
 
-### Prerequisites
-*   Java Development Kit (JDK 17 or higher)
-*   Maven 3.x
-*   Node.js (v18 or higher) & npm
-
-### Running the Backend Server
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Compile and start the Spring Boot application:
-   ```bash
-   mvn spring-boot:run
-   ```
-   *The backend starts on port **8085**.*
-
-### Running the Frontend Client
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install node dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the Vite development server:
-   ```bash
-   npm run dev
-   ```
-   *Open [http://localhost:5173](http://localhost:5173) in your browser.*
+*   **Background**: `#0F1117`
+*   **Sidebar & Columns**: `#171923`
+*   **Cards & Inputs**: `#1F2430`
+*   **Primary Accent**: `#5B8CFF`
+*   **Secondary Accent**: `#8B5CF6`
+*   **Success Tone**: `#22C55E`
+*   **Warning Alert**: `#F59E0B`
+*   **Danger Alert**: `#EF4444`
+*   **Text Primary**: `#F8FAFC`
+*   **Text Secondary**: `#94A3B8`
 
 ---
 
-## 👥 Seed Test Accounts
+## ✨ Enterprise Capabilities
 
-The platform is pre-loaded with mock enterprise accounts to test role-based privileges:
-1.  **Sarah (Workspace Admin)**: Workspace creator, holds full management privileges.
-2.  **David (Contributor)**: Developer assignee.
-3.  **Alice (Quality Assurance)**: QA Auditor.
+### 1. Workspace Isolation & Sharing
+*   Multi-tenant architecture: Workspaces are private by default.
+*   Workspace admins can invite members by username/role to grant explicit access.
+
+### 2. Strict Role-Based Access Control (RBAC)
+*   **Workspace Admin**: Full board management, column editing, member invitation, user creation/deletion.
+*   **Contributor (Developer)**: Can move assigned task cards between **To Do**, **In Progress**, and **Done**.
+*   **Quality Assurance (QA)**: Review cards in **Done**; can **Approve** (finalize) or **Reject** (send back to **To Do**).
+
+### 3. Live WebSocket Updates
+*   Real-time multi-user synchronization over `/ws-updates` WebSocket endpoints.
+*   Automatic client board refresh when any team member modifies task positions or statuses.
+
+### 4. Email OTP Password Reset
+*   Two-step security verification for password changes using a 6-digit OTP generated via `POST /api/v1/users/send-otp`.
+
+### 5. Smart User Soft Deletion
+*   Deleting a user removes them from active lists, clears task assignments, and releases unique email/username constraints to allow re-registration with the same email address.
 
 ---
 
-## 🧪 E2E Integration Testing
-The project includes a PowerShell integration test suite to verify role security and database workflow transitions:
+## 🚀 Quick Start & Deployment
+
+### Option A: 1-Click Launch (Windows)
+Run the startup script from PowerShell:
 ```powershell
-# Run from root folder
+.\start.ps1
+```
+
+### Option B: Docker Compose
+Build and run the full stack via Docker:
+```bash
+docker-compose up --build
+```
+*   **Frontend**: [http://localhost:5173](http://localhost:5173)
+*   **Backend**: [http://localhost:8085](http://localhost:8085)
+
+### Option C: Manual Setup
+
+#### 1. Backend (Spring Boot)
+```bash
+cd backend
+mvn spring-boot:run
+```
+
+#### 2. Frontend (React + Vite)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## 🧪 E2E Verification Suite
+
+Run the automated integration test script:
+```powershell
 .\verify_api.ps1
 ```
+
+---
+
+## 👥 Seed Accounts
+
+| Role | Username | Password | Email |
+| :--- | :--- | :--- | :--- |
+| **Workspace Admin** | `Sarah (Admin)` | `admin123` | `sarah.admin@enterprise.com` |
+| **Developer** | `David (Developer)` | `dev123` | `david.dev@enterprise.com` |
+| **QA Auditor** | `Alice (QA Auditor)` | `qa123` | `alice.qa@enterprise.com` |
