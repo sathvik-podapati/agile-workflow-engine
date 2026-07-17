@@ -1,0 +1,36 @@
+# Root gitignore for Agile Workflow Engine (Spring Boot + React)
+
+# Dependency Directories
+node_modules/
+target/
+.gradle/
+build/
+dist/
+
+# IDE / Editor config
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Logs and databases
+*.log
+*.sqlite
+
+# Local Environment Variables
+.env
+.env.local
+.env.*.local
