@@ -2,8 +2,238 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Edit2, Calendar, AlertCircle, Filter, 
   ArrowUpDown, CheckCircle, FolderPlus, Folder, 
-  X, Loader2, Sparkles, UserCheck, Users, ShieldAlert, CheckSquare, Search, Bell
+  X, Loader2, Sparkles, UserCheck, Users, ShieldAlert, CheckSquare, Search, Bell, Activity, Inbox
 } from 'lucide-react';
+
+// ----------------------------------------------------
+// Interactive Visual Analytics Glassmorphic SVG Components
+// ----------------------------------------------------
+function RadialProgressGauge({ percentage }) {
+  const radius = 52;
+  const strokeWidth = 10;
+  const normalizedRadius = radius - strokeWidth * 0.5;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <svg height={radius * 2} width={radius * 2} style={{ transform: 'rotate(-90deg)' }}>
+        <defs>
+          <linearGradient id="gaugeGradientAmber" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#E8A33D" />
+            <stop offset="100%" stopColor="#4ADE80" />
+          </linearGradient>
+        </defs>
+        <circle
+          stroke="rgba(255, 255, 255, 0.08)"
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+        <circle
+          stroke="url(#gaugeGradientAmber)"
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference + ' ' + circumference}
+          style={{ strokeDashoffset, transition: 'stroke-dashoffset 0.8s ease-in-out', strokeLinecap: 'round' }}
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+      </svg>
+      <div style={{ position: 'absolute', textAlign: 'center', pointerEvents: 'none' }}>
+        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)' }}>{percentage}%</div>
+        <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Progress</div>
+      </div>
+    </div>
+  );
+}
+
+function StatusDonutChart({ completed, inProgress, backlog, total }) {
+  if (!total || total === 0) total = 1;
+  const pCompleted = (completed / total) * 100;
+  const pInProgress = (inProgress / total) * 100;
+  const pBacklog = (backlog / total) * 100;
+
+  const radius = 45;
+  const strokeWidth = 14;
+  const circumference = 2 * Math.PI * radius;
+
+  const len1 = (pCompleted / 100) * circumference;
+  const len2 = (pInProgress / 100) * circumference;
+  const len3 = (pBacklog / 100) * circumference;
+
+  const offset1 = 0;
+  const offset2 = len1;
+  const offset3 = len1 + len2;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+      <svg width={120} height={120} viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx="60" cy="60" r={radius} fill="transparent" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+        {pCompleted > 0 && (
+          <circle
+            cx="60" cy="60" r={radius}
+            fill="transparent"
+            stroke="#4ADE80"
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${len1} ${circumference - len1}`}
+            strokeDashoffset={-offset1}
+          />
+        )}
+        {pInProgress > 0 && (
+          <circle
+            cx="60" cy="60" r={radius}
+            fill="transparent"
+            stroke="#E8A33D"
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${len2} ${circumference - len2}`}
+            strokeDashoffset={-offset2}
+          />
+        )}
+        {pBacklog > 0 && (
+          <circle
+            cx="60" cy="60" r={radius}
+            fill="transparent"
+            stroke="#F59E0B"
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${len3} ${circumference - len3}`}
+            strokeDashoffset={-offset3}
+          />
+        )}
+      </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.78rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#4ADE80' }}></span>
+          <span style={{ color: 'var(--text-secondary)' }}>Completed:</span>
+          <strong style={{ color: 'var(--text-primary)' }}>{completed} ({Math.round(pCompleted)}%)</strong>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#E8A33D' }}></span>
+          <span style={{ color: 'var(--text-secondary)' }}>In Progress:</span>
+          <strong style={{ color: 'var(--text-primary)' }}>{inProgress} ({Math.round(pInProgress)}%)</strong>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#F59E0B' }}></span>
+          <span style={{ color: 'var(--text-secondary)' }}>Backlog / To Do:</span>
+          <strong style={{ color: 'var(--text-primary)' }}>{backlog} ({Math.round(pBacklog)}%)</strong>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BurndownCurveChart({ progressTrend, totalTasks }) {
+  if (!progressTrend || progressTrend.length === 0) return null;
+  const width = 450;
+  const height = 180;
+  const padding = 30;
+
+  const maxVal = Math.max(totalTasks || 5, 5);
+
+  const pointsActual = progressTrend.map((pt, idx) => {
+    const x = padding + (idx / (progressTrend.length - 1)) * (width - 2 * padding);
+    const y = height - padding - (pt.actualCompleted / maxVal) * (height - 2 * padding);
+    return { x, y, val: pt.actualCompleted, day: pt.day };
+  });
+
+  const pointsTarget = progressTrend.map((pt, idx) => {
+    const x = padding + (idx / (progressTrend.length - 1)) * (width - 2 * padding);
+    const y = height - padding - (pt.targetCompleted / maxVal) * (height - 2 * padding);
+    return { x, y, val: pt.targetCompleted, day: pt.day };
+  });
+
+  const pathActualD = pointsActual.reduce((acc, pt, i, arr) => {
+    if (i === 0) return `M ${pt.x} ${pt.y}`;
+    const prev = arr[i - 1];
+    const cx1 = prev.x + (pt.x - prev.x) / 2;
+    const cy1 = prev.y;
+    const cx2 = prev.x + (pt.x - prev.x) / 2;
+    const cy2 = pt.y;
+    return `${acc} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${pt.x} ${pt.y}`;
+  }, '');
+
+  const areaD = `${pathActualD} L ${pointsActual[pointsActual.length - 1].x} ${height - padding} L ${pointsActual[0].x} ${height - padding} Z`;
+  const pathTargetD = pointsTarget.reduce((acc, pt, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`, '');
+
+  return (
+    <div style={{ width: '100%', overflowX: 'auto' }}>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+        <defs>
+          <linearGradient id="areaGradientGlass" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#E8A33D" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#E8A33D" stopOpacity="0.0" />
+          </linearGradient>
+          <linearGradient id="lineGradientAmber" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#E8A33D" />
+            <stop offset="100%" stopColor="#4ADE80" />
+          </linearGradient>
+        </defs>
+        
+        {/* Horizontal Gridlines */}
+        {[0.25, 0.5, 0.75, 1].map((pct, i) => {
+          const y = height - padding - pct * (height - 2 * padding);
+          return (
+            <line key={i} x1={padding} y1={y} x2={width - padding} y2={y} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
+          );
+        })}
+
+        {/* Area Fill */}
+        <path d={areaD} fill="url(#areaGradientGlass)" />
+
+        {/* Target Line */}
+        <path d={pathTargetD} fill="none" stroke="#64748B" strokeWidth="2" strokeDasharray="4 4" />
+
+        {/* Actual Progress Line */}
+        <path d={pathActualD} fill="none" stroke="url(#lineGradientAmber)" strokeWidth="3" />
+
+        {/* Data Points */}
+        {pointsActual.map((pt, i) => (
+          <g key={i}>
+            <circle cx={pt.x} cy={pt.y} r="5" fill="#E8A33D" stroke="#07090e" strokeWidth="2" />
+            <text x={pt.x} y={height - 8} fill="var(--text-muted)" fontSize="10" textAnchor="middle">{pt.day}</text>
+            <text x={pt.x} y={pt.y - 10} fill="#E8A33D" fontSize="10" fontWeight="700" textAnchor="middle">{pt.val}</text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function ProgressBar({ value, max, color = '#E8A33D', label }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+      {label && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{label}</span>
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>{pct}%</span>
+        </div>
+      )}
+      <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: '3px', transition: 'width 0.6s ease' }}></div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, subtext, accent = 'var(--text-primary)' }) {
+  return (
+    <div className="glass-panel" style={{
+      padding: '1.2rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.25rem'
+    }}>
+      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
+      <div style={{ fontSize: '1.8rem', fontWeight: 800, color: accent, letterSpacing: '-0.02em' }}>{value}</div>
+      {subtext && <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{subtext}</span>}
+    </div>
+  );
+}
+
 
 export default function App() {
   // Enterprise Users State
@@ -45,9 +275,19 @@ export default function App() {
   // Form Fields
   const [workspaceForm, setWorkspaceForm] = useState({ name: '' });
   const [columnForm, setColumnForm] = useState({ name: '' });
-  const [taskForm, setTaskForm] = useState({ title: '', description: '', priority: 'MEDIUM', dueDate: '', assigneeId: '' });
+  const [taskForm, setTaskForm] = useState({ title: '', description: '', priority: 'MEDIUM', dueDate: '', assigneeId: '', gitRepo: '', gitBranch: '', gitCommitHash: '' });
   const [inviteMemberId, setInviteMemberId] = useState('');
   const [userForm, setUserForm] = useState({ username: '', email: '', role: 'CONTRIBUTOR' });
+
+  // View & Analytics States
+  const [currentView, setCurrentView] = useState('board');
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [isFetchingAnalytics, setIsFetchingAnalytics] = useState(false);
+
+  // Git Diff states
+  const [gitDiffText, setGitDiffText] = useState('');
+  const [isFetchingDiff, setIsFetchingDiff] = useState(false);
+  const [showGitDiffPreview, setShowGitDiffPreview] = useState(false);
 
   // Active Task Subtasks and Comments
   const [activeTaskComments, setActiveTaskComments] = useState([]);
@@ -63,6 +303,12 @@ export default function App() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpMessage, setOtpMessage] = useState('');
   const [changePasswordForm, setChangePasswordForm] = useState({ otp: '', newPassword: '', confirmPassword: '' });
+
+  // AI Integration States
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [isAuditingTask, setIsAuditingTask] = useState(false);
+  const [pendingSubtasks, setPendingSubtasks] = useState([]);
+  const [descriptionTab, setDescriptionTab] = useState('write');
 
   // Helper: Request Headers with Authentication Context
   const getAuthHeaders = () => {
@@ -113,6 +359,9 @@ export default function App() {
 
       ws.onmessage = (event) => {
         if (event.data === 'REFRESH') {
+          if (currentWorkspace) {
+            fetchColumns(currentWorkspace.id);
+          }
           fetchFilteredTasks();
           fetchNotifications();
         }
@@ -378,19 +627,26 @@ export default function App() {
       description: task.description || '',
       priority: task.priority,
       dueDate: task.dueDate || '',
-      assigneeId: task.assigneeId || ''
+      assigneeId: task.assigneeId || '',
+      gitRepo: task.gitRepo || '',
+      gitBranch: task.gitBranch || '',
+      gitCommitHash: task.gitCommitHash || ''
     });
     
     setActiveTaskComments(task.comments || []);
     setActiveTaskSubtasks(task.subtasks || []);
     setNewCommentText('');
     setNewSubtaskTitle('');
+    setPendingSubtasks([]);
+    setDescriptionTab('write');
+    setGitDiffText('');
+    setShowGitDiffPreview(false);
     
     setModals(prev => ({ 
       ...prev, 
       task: { 
         show: true, 
-        mode: isAdmin ? 'edit' : 'view', 
+        mode: 'edit', 
         data: task, 
         columnId: column.id 
       } 
@@ -468,6 +724,112 @@ export default function App() {
       fetchFilteredTasks();
     } catch (err) {
       showToast(err.message, 'error');
+    }
+  };
+
+  const handleAiSuggestPlan = async () => {
+    if (!taskForm.title.trim()) {
+      showToast('Please enter a task title first to plan with AI', 'error');
+      return;
+    }
+    setIsGeneratingPlan(true);
+    try {
+      const res = await fetch('/api/v1/ai/suggest-task', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ title: taskForm.title })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'AI request failed');
+
+      setTaskForm(prev => ({ ...prev, description: data.description }));
+      
+      // If we are editing an existing task, create the subtasks directly in DB
+      if (modals.task.mode === 'edit' && modals.task.data?.id) {
+        const taskId = modals.task.data.id;
+        const addedList = [];
+        for (const subtaskTitle of data.subtasks) {
+          const sRes = await fetch(`/api/v1/tasks/${taskId}/subtasks`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ title: subtaskTitle })
+          });
+          if (sRes.ok) {
+            const savedSub = await sRes.json();
+            addedList.push(savedSub);
+          }
+        }
+        setActiveTaskSubtasks(prev => [...prev, ...addedList]);
+        fetchFilteredTasks();
+      } else {
+        // In creation mode, queue them in pendingSubtasks state so they save on submit
+        setPendingSubtasks(data.subtasks);
+        // Also show them in the UI preview list by setting a mocked format temporarily
+        setActiveTaskSubtasks(data.subtasks.map((title, i) => ({ id: `temp-${i}`, title, completed: false })));
+      }
+
+      showToast('AI suggestions successfully generated!', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  };
+
+  const handleAiAuditTask = async () => {
+    if (!modals.task.data?.id) return;
+    setIsAuditingTask(true);
+    try {
+      const res = await fetch('/api/v1/ai/audit-task', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ taskId: modals.task.data.id })
+      });
+      const commentData = await res.json();
+      if (!res.ok) throw new Error(commentData.message || 'AI Audit failed');
+
+      setActiveTaskComments(prev => [...prev, commentData]);
+      fetchFilteredTasks();
+      showToast('AI QA Audit complete! Review posted in Discussion Feed.', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setIsAuditingTask(false);
+    }
+  };
+
+  const handleFetchGitDiff = async () => {
+    setIsFetchingDiff(true);
+    try {
+      const repoParam = encodeURIComponent(taskForm.gitRepo || '');
+      const refParam = encodeURIComponent(taskForm.gitCommitHash || taskForm.gitBranch || '');
+      const res = await fetch(`/api/v1/ai/diff?repo=${repoParam}&ref=${refParam}`);
+      const text = await res.text();
+      setGitDiffText(text);
+      setShowGitDiffPreview(true);
+    } catch (err) {
+      showToast('Failed loading Git diff', 'error');
+    } finally {
+      setIsFetchingDiff(false);
+    }
+  };
+
+
+
+  const fetchWorkspaceAnalytics = async (wsId) => {
+    if (!wsId) return;
+    setIsFetchingAnalytics(true);
+    try {
+      const res = await fetch(`/api/v1/workspaces/${wsId}/analytics`, {
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) throw new Error('Failed to load workspace analytics');
+      const data = await res.json();
+      setAnalyticsData(data);
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setIsFetchingAnalytics(false);
     }
   };
 
@@ -614,9 +976,24 @@ export default function App() {
       const resJson = await res.json();
       if (!res.ok) throw new Error(resJson.message || 'Failed to save task card');
 
+      // Persist any AI-suggested subtasks if creating a new task card
+      if (method === 'POST' && pendingSubtasks.length > 0) {
+        for (const subtaskTitle of pendingSubtasks) {
+          await fetch(`/api/v1/tasks/${resJson.id}/subtasks`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ title: subtaskTitle })
+          });
+        }
+        setPendingSubtasks([]);
+      }
+
       showToast('Task card saved', 'success');
       setModals(prev => ({ ...prev, task: { show: false } }));
-      setTaskForm({ title: '', description: '', priority: 'MEDIUM', dueDate: '', assigneeId: '' });
+      setTaskForm({ title: '', description: '', priority: 'MEDIUM', dueDate: '', assigneeId: '', gitRepo: '', gitBranch: '', gitCommitHash: '' });
+      if (currentWorkspace) {
+        fetchColumns(currentWorkspace.id);
+      }
       fetchFilteredTasks();
     } catch (err) {
       showToast(err.message, 'error');
@@ -877,7 +1254,7 @@ export default function App() {
 
   if (!currentUser) {
     return (
-      <div className="animated-fade" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(ellipse at bottom, #171923 0%, #0F1117 100%)', padding: '1.5rem' }}>
+      <div className="animated-fade" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a', padding: '1.5rem' }}>
         
         {/* Toast Notification Bar */}
         <div className="toast-container">
@@ -891,7 +1268,7 @@ export default function App() {
 
         <form onSubmit={handleLogin} className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '2.5rem 2rem', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', gap: '1.5rem', border: '1px solid var(--glass-border)', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ background: 'var(--accent-primary)', width: '48px', height: '48px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)' }}>
+            <div style={{ background: 'var(--accent-primary)', width: '48px', height: '48px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem',  }}>
               <Sparkles size={24} color="#fff" />
             </div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0 0 0.25rem 0', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>Agile Workflow Engine</h2>
@@ -910,11 +1287,16 @@ export default function App() {
                 style={{ width: '100%' }}
               >
                 <option value="">Select Enterprise User...</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.username} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-                    {u.username} ({u.role.replace('WORKSPACE_', '').replace('_', ' ')})
-                  </option>
-                ))}
+                {users
+                  .filter(u => u.username !== 'AI Auditor')
+                  .filter(u => !u.username.includes('mail_dev_'))
+                  .filter(u => u.username !== 'user_reused')
+                  .filter(u => u.username !== 'nani')
+                  .map(u => (
+                    <option key={u.id} value={u.username} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                      {u.username} ({u.role.replace('WORKSPACE_', '').replace('_', ' ')})
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -937,10 +1319,10 @@ export default function App() {
           </button>
 
           <div style={{ textAlign: 'center', background: 'rgba(255, 255, 255, 0.02)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>DEFAULT TEST PASSWORDS</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sarah (Admin): <b>admin123</b></span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>David (Developer): <b>dev123</b></span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Alice (QA Auditor): <b>qa123</b></span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>DEMO CREDENTIALS</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Admin: <b>admin123</b></span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Developer: <b>dev123</b></span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>QA Auditor: <b>qa123</b></span>
           </div>
         </form>
       </div>
@@ -963,7 +1345,7 @@ export default function App() {
       {/* Premium Header */}
       <header className="glass-panel" style={{ margin: '1.5rem', padding: '1rem 1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', borderRadius: 'var(--radius-md)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ background: 'var(--accent-primary)', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(99, 102, 241, 0.3)' }}>
+          <div style={{ background: 'var(--accent-primary)', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',  }}>
             <Sparkles size={20} color="#fff" />
           </div>
           <div>
@@ -975,7 +1357,7 @@ export default function App() {
         {/* Logged in User Profile Info */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'rgba(255,255,255,0.03)', padding: '0.35rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--glass-border)' }}>
-            <div style={{ background: 'var(--accent-secondary)', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#0F172A' }}>
+            <div style={{ background: 'var(--accent-primary)', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#0a0a0a' }}>
               {currentUser?.username.charAt(0)}
             </div>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 600 }}>{currentUser?.username}</span>
@@ -996,6 +1378,27 @@ export default function App() {
           </button>
 
           <div style={{ borderLeft: '1px solid var(--glass-border)', height: '24px' }}></div>
+
+          {/* View Switcher: Board vs Analytics */}
+          <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', borderRadius: 'var(--radius-sm)', padding: '0.2rem', border: '1px solid var(--glass-border)' }}>
+            <button 
+              className={`btn ${currentView === 'board' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', border: 'none' }}
+              onClick={() => setCurrentView('board')}
+            >
+              Kanban Board
+            </button>
+            <button 
+              className={`btn ${currentView === 'analytics' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', border: 'none' }}
+              onClick={() => {
+                setCurrentView('analytics');
+                if (currentWorkspace) fetchWorkspaceAnalytics(currentWorkspace.id);
+              }}
+            >
+              Analytics & Velocity
+            </button>
+          </div>
 
           {/* Workspace Operations */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -1057,14 +1460,14 @@ export default function App() {
             style={{ padding: '0.5rem', minWidth: '36px', height: '36px', position: 'relative' }} 
             onClick={() => setShowNotifications(!showNotifications)}
           >
-            <Bell size={16} color={showNotifications ? '#0F172A' : 'var(--text-secondary)'} />
+            <Bell size={16} color={showNotifications ? '#0a0a0a' : 'var(--text-secondary)'} />
             {notifications.filter(n => !n.readStatus).length > 0 && (
               <span style={{ 
                 position: 'absolute', 
                 top: '-4px', 
                 right: '-4px', 
                 background: 'var(--priority-high)', 
-                color: showNotifications ? '#0F172A' : '#fff', 
+                color: '#fff', 
                 borderRadius: '50%', 
                 width: '16px', 
                 height: '16px', 
@@ -1082,10 +1485,136 @@ export default function App() {
       </header>
 
       {/* Main Workspace Area */}
-      <main style={{ flexGrow: 1, padding: '0 1.5rem 1.5rem 1.5rem', display: 'flex', flexDirection: 'row', gap: '1.5rem', alignItems: 'stretch', overflow: 'hidden' }}>
+      <main style={{ flexGrow: 1, padding: '0 1.5rem 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflow: 'hidden' }}>
         {currentWorkspace ? (
-          <>
-            <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          currentView === 'analytics' ? (
+            <div style={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingRight: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>Analytics Overview</h2>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.25rem 0 0 0' }}>Team performance and sprint progress</p>
+                </div>
+                <button className="btn btn-secondary" onClick={() => fetchWorkspaceAnalytics(currentWorkspace.id)}>
+                  Refresh
+                </button>
+              </div>
+
+              {analyticsData ? (
+                <>
+                  {/* Executive Risk Alert & Forecast Banner */}
+                  <div className="glass-panel" style={{ 
+                    background: analyticsData.overdueTasks > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(232, 163, 61, 0.08)', 
+                    borderColor: analyticsData.overdueTasks > 0 ? 'rgba(239, 68, 68, 0.35)' : 'rgba(232, 163, 61, 0.25)', 
+                    padding: '0.85rem 1.25rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <Activity size={20} color={analyticsData.overdueTasks > 0 ? '#EF4444' : '#E8A33D'} />
+                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {analyticsData.bottleneckNotice || 'Sprint velocity is optimal'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--glass-border)', padding: '0.3rem 0.75rem', borderRadius: '6px' }}>
+                      Forecast: <strong style={{ color: 'var(--accent-primary)' }}>{analyticsData.forecastEta}</strong>
+                    </div>
+                  </div>
+
+                  {/* Top Visual Gauges & Donut Row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.2rem' }}>
+                    {/* Radial Progress Ring Gauge */}
+                    <div className="glass-panel" style={{ padding: '1.4rem', display: 'flex', alignItems: 'center', justifyContent: 'space-around' }}>
+                      <RadialProgressGauge percentage={analyticsData.overallProgressRate} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Velocity Status</span>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: analyticsData.overallProgressRate > 70 ? '#4ADE80' : 'var(--accent-primary)' }}>
+                          {analyticsData.overallProgressRate > 70 ? '🚀 High Velocity' : analyticsData.overallProgressRate > 30 ? '⚡ Steady Sprint' : '⏳ Initial Phase'}
+                        </div>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{analyticsData.completedTasks} of {analyticsData.totalTasks} tasks verified</span>
+                      </div>
+                    </div>
+
+                    {/* Status Distribution Donut Chart */}
+                    <div className="glass-panel" style={{ padding: '1.4rem' }}>
+                      <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.8rem 0', color: 'var(--text-primary)' }}>📊 Task Status Distribution</h4>
+                      <StatusDonutChart 
+                        completed={analyticsData.completedTasks} 
+                        inProgress={analyticsData.inProgressTasks} 
+                        backlog={analyticsData.backlogTasks} 
+                        total={analyticsData.totalTasks} 
+                      />
+                    </div>
+
+                    {/* Executive KPI Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                      <StatCard label="Completed" value={analyticsData.completedTasks} subtext="Closed & Verified" accent="#4ADE80" />
+                      <StatCard label="In Progress" value={analyticsData.inProgressTasks} subtext="Active Work" accent="#E8A33D" />
+                      <StatCard label="Backlog" value={analyticsData.backlogTasks} subtext="Queued" accent="#F59E0B" />
+                      <StatCard label="Overdue" value={analyticsData.overdueTasks} subtext="Past Due Date" accent={analyticsData.overdueTasks > 0 ? '#EF4444' : '#4ADE80'} />
+                    </div>
+                  </div>
+
+                  {/* Priority Spectrum & Team Workload */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
+                    <div className="glass-panel" style={{ padding: '1.4rem' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 1.2rem 0' }}>🎯 Priority Breakdown</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <ProgressBar value={analyticsData.highPriorityCount} max={analyticsData.totalTasks} color="#EF4444" label={`High Priority · ${analyticsData.highPriorityCount} tasks`} />
+                        <ProgressBar value={analyticsData.mediumPriorityCount} max={analyticsData.totalTasks} color="#F59E0B" label={`Medium Priority · ${analyticsData.mediumPriorityCount} tasks`} />
+                        <ProgressBar value={analyticsData.lowPriorityCount} max={analyticsData.totalTasks} color="#6B7280" label={`Low Priority · ${analyticsData.lowPriorityCount} tasks`} />
+                      </div>
+                    </div>
+
+                    <div className="glass-panel" style={{ padding: '1.4rem' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 1.2rem 0' }}>👥 Team Workload Capacity</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+                        {analyticsData.teamMemberProgress.map((member, idx) => (
+                          <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#07090e' }}>
+                                  {member.username.charAt(0).toUpperCase()}
+                                </div>
+                                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{member.username}</span>
+                                <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: '4px', border: '1px solid var(--glass-border)', color: member.healthBadge === 'HIGH_LOAD' ? '#EF4444' : member.healthBadge === 'OPTIMAL' ? '#4ADE80' : 'var(--text-muted)', fontWeight: 600 }}>
+                                  {member.healthBadge === 'HIGH_LOAD' ? 'High Load' : member.healthBadge === 'OPTIMAL' ? 'Optimal' : 'Available'}
+                                </span>
+                              </div>
+                              <span style={{ color: 'var(--accent-primary)', fontWeight: 700, fontSize: '0.8rem' }}>
+                                {member.completedTasks}/{member.assignedTasks}
+                              </span>
+                            </div>
+                            <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ width: `${Math.min(100, member.progressPercentage)}%`, height: '100%', background: member.progressPercentage === 100 ? '#4ADE80' : 'var(--accent-primary)', borderRadius: '3px', transition: 'width 0.5s ease' }}></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SVG Bezier Sprint Burndown Trajectory */}
+                  {analyticsData.progressTrend && analyticsData.progressTrend.length > 0 && (
+                    <div className="glass-panel" style={{ padding: '1.4rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>📈 Sprint Task Completion Trajectory</h3>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Target Pace vs Verified Actuals</span>
+                      </div>
+                      <BurndownCurveChart progressTrend={analyticsData.progressTrend} totalTasks={analyticsData.totalTasks} />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  <Loader2 size={28} style={{ animation: 'spin 1.5s linear infinite' }} />
+                  <p style={{ marginTop: '0.8rem' }}>Loading analytics...</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'row', gap: '1.5rem', alignItems: 'stretch', overflow: 'hidden' }}>
+              <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* Dynamic Filter Controls */}
             <section className="glass-panel" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', borderRadius: 'var(--radius-md)' }}>
               
@@ -1318,7 +1847,7 @@ export default function App() {
                               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.8rem', borderTop: '1px solid var(--glass-border)', paddingTop: '0.6rem' }} onClick={(e) => e.stopPropagation()}>
                                 <button 
                                   className="btn btn-primary" 
-                                  style={{ flex: 1, padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderRadius: '4px', background: 'var(--role-qa)', color: '#0F172A', border: 'none' }}
+                                  style={{ flex: 1, padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderRadius: '4px', background: '#4ADE80', color: '#0a0a0a', border: 'none' }}
                                   onClick={() => handleApproveTask(task.id)}
                                 >
                                   Approve
@@ -1334,21 +1863,54 @@ export default function App() {
                             )}
                           </div>
                         ))}
+
+                        {columnTasks.length === 0 && (
+                          <div style={{ 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            padding: '2.5rem 1rem', 
+                            border: '1px dashed rgba(255, 255, 255, 0.15)', 
+                            borderRadius: '12px', 
+                            color: 'var(--text-muted)', 
+                            fontSize: '0.82rem', 
+                            gap: '0.5rem', 
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            backdropFilter: 'blur(8px)',
+                            textAlign: 'center',
+                            margin: 'auto 0'
+                          }}>
+                            <Inbox size={22} style={{ opacity: 0.5, color: 'var(--accent-primary)' }} />
+                            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>No cards in this column</span>
+                            <span style={{ fontSize: '0.72rem', opacity: 0.7 }}>Drag task cards here to update status</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Add Task Card (Admin Only) */}
                       {isAdmin && (
-                        <div style={{ padding: '0.8rem 1rem' }}>
+                        <div style={{ padding: '0.8rem 1rem', borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
                           <button 
                             className="btn btn-secondary" 
-                            style={{ width: '100%', borderStyle: 'dashed', padding: '0.45rem', fontSize: '0.8rem' }}
+                            style={{ 
+                              width: '100%', 
+                              borderStyle: 'dashed', 
+                              borderColor: 'rgba(255, 255, 255, 0.18)',
+                              background: 'rgba(255, 255, 255, 0.03)',
+                              padding: '0.55rem', 
+                              fontSize: '0.82rem',
+                              borderRadius: '10px'
+                            }}
                             onClick={() => {
-                              setTaskForm({ title: '', description: '', priority: 'MEDIUM', dueDate: '', assigneeId: '' });
+                              setTaskForm({ title: '', description: '', priority: 'MEDIUM', dueDate: '', assigneeId: '', gitRepo: '', gitBranch: '', gitCommitHash: '' });
+                              setGitDiffText('');
+                              setShowGitDiffPreview(false);
                               setModals(prev => ({ ...prev, task: { show: true, mode: 'create', data: null, columnId: column.id } }));
                             }}
                           >
-                            <Plus size={14} />
-                            <span>Add Task Card</span>
+                            <Plus size={14} color="var(--accent-primary)" />
+                            <span style={{ fontWeight: 600 }}>Add Task Card</span>
                           </button>
                         </div>
                       )}
@@ -1358,7 +1920,6 @@ export default function App() {
               </div>
             )}
             </div>
-
             {/* Right Notification Sidebar */}
             {showNotifications && (
               <div 
@@ -1415,7 +1976,8 @@ export default function App() {
                 </div>
               </div>
             )}
-          </>
+            </div>
+          )
         ) : (
           <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.25rem', border: '1px dashed var(--glass-border)', borderRadius: 'var(--radius-lg)', minHeight: '350px' }}>
             <FolderPlus size={48} color="var(--text-muted)" style={{ opacity: 0.5 }} />
@@ -1575,6 +2137,10 @@ export default function App() {
                       {users
                         .filter(u => u.id !== currentWorkspace.creator?.id) // exclude owner
                         .filter(u => !(currentWorkspace.assignedMembers || []).some(m => m.id === u.id)) // exclude current members
+                        .filter(u => u.username !== 'AI Auditor')
+                        .filter(u => !u.username.includes('mail_dev_'))
+                        .filter(u => u.username !== 'user_reused')
+                        .filter(u => u.username !== 'nani')
                         .map(u => (
                           <option key={u.id} value={u.id}>{u.username} ({u.role.replace('WORKSPACE_', '')})</option>
                         ))
@@ -1670,7 +2236,33 @@ export default function App() {
               
               {/* Task Title */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Task Title</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Task Title</label>
+                  {modals.task.mode !== 'view' && (
+                    <button 
+                      type="button" 
+                      onClick={handleAiSuggestPlan}
+                      disabled={isGeneratingPlan}
+                      style={{ 
+                        background: 'var(--accent-primary)', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        color: '#fff', 
+                        fontSize: '0.72rem', 
+                        fontWeight: 600, 
+                        padding: '0.2rem 0.5rem', 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        boxShadow: 'none'
+                      }}
+                    >
+                      <Sparkles size={10} style={{ animation: isGeneratingPlan ? 'spin 1s linear infinite' : 'none' }} />
+                      <span>{isGeneratingPlan ? 'Planning...' : 'Suggest Plan with AI'}</span>
+                    </button>
+                  )}
+                </div>
                 <input 
                   type="text" 
                   required
@@ -1684,17 +2276,97 @@ export default function App() {
 
               {/* Task Description */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Description</label>
-                <textarea 
-                  placeholder="Provide task scope details..." 
-                  disabled={modals.task.mode === 'view'}
-                  className="glass-input"
-                  rows="4"
-                  value={taskForm.description}
-                  onChange={(e) => setTaskForm(prev => ({ ...prev, description: e.target.value }))}
-                  style={{ resize: 'none' }}
-                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Description</label>
+                  {modals.task.mode !== 'view' && (
+                    <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '2px' }}>
+                      <button 
+                        type="button"
+                        onClick={() => setDescriptionTab('write')}
+                        style={{
+                          background: descriptionTab === 'write' ? 'var(--accent-primary)' : 'transparent',
+                          color: descriptionTab === 'write' ? '#fff' : 'var(--text-secondary)',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '0.2rem 0.5rem',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'background 0.15s ease'
+                        }}
+                      >
+                        Write
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setDescriptionTab('preview')}
+                        style={{
+                          background: descriptionTab === 'preview' ? 'var(--accent-primary)' : 'transparent',
+                          color: descriptionTab === 'preview' ? '#fff' : 'var(--text-secondary)',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '0.2rem 0.5rem',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'background 0.15s ease'
+                        }}
+                      >
+                        Preview
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {modals.task.mode === 'view' ? (
+                  <div className="glass-panel" style={{ 
+                    padding: '0.8rem 1rem', 
+                    borderRadius: 'var(--radius-sm)', 
+                    border: '1px solid var(--glass-border)',
+                    background: 'rgba(255, 255, 255, 0.01)',
+                    minHeight: '80px',
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                  }}>
+                    {taskForm.description ? (
+                      <MarkdownViewer text={taskForm.description} />
+                    ) : (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        No description provided for this task.
+                      </span>
+                    )}
+                  </div>
+                ) : descriptionTab === 'preview' ? (
+                  <div className="glass-panel" style={{ 
+                    padding: '0.8rem 1rem', 
+                    borderRadius: 'var(--radius-sm)', 
+                    border: '1px solid var(--glass-border)',
+                    background: 'rgba(255, 255, 255, 0.01)',
+                    minHeight: '100px',
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                  }}>
+                    {taskForm.description ? (
+                      <MarkdownViewer text={taskForm.description} />
+                    ) : (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        Nothing to preview. Type something in the "Write" tab first.
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <textarea 
+                    placeholder="Provide task scope details (supports Markdown)..." 
+                    className="glass-input"
+                    rows="4"
+                    value={taskForm.description}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, description: e.target.value }))}
+                    style={{ resize: 'none' }}
+                  />
+                )}
               </div>
+
+
 
               {/* Priority & Due Date */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -1736,6 +2408,10 @@ export default function App() {
                   <option value="">Unassigned</option>
                   {currentWorkspace && [currentWorkspace.creator, ...(currentWorkspace.assignedMembers || [])]
                     .filter(Boolean)
+                    .filter(u => u.username !== 'AI Auditor')
+                    .filter(u => !u.username.includes('mail_dev_'))
+                    .filter(u => u.username !== 'user_reused')
+                    .filter(u => u.username !== 'nani')
                     .map(u => (
                       <option key={u.id} value={u.id}>
                         {u.username} ({u.role.replace('WORKSPACE_', '').replace('_', ' ')})
@@ -1743,6 +2419,77 @@ export default function App() {
                     ))
                   }
                 </select>
+              </div>
+
+              {/* Git Repository & Code Diff Section */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', borderTop: '1px solid var(--glass-border)', paddingTop: '0.8rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span>Git Code Context</span>
+                  </label>
+                  <button 
+                    type="button" 
+                    onClick={handleFetchGitDiff}
+                    disabled={isFetchingDiff}
+                    style={{ 
+                      background: 'rgba(255,255,255,0.03)', 
+                      border: '1px solid var(--glass-border)', 
+                      borderRadius: '4px', 
+                      color: 'var(--text-primary)', 
+                      fontSize: '0.7rem', 
+                      fontWeight: 600, 
+                      padding: '0.25rem 0.5rem', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem'
+                    }}
+                  >
+                    <span>{isFetchingDiff ? 'Loading Diff...' : showGitDiffPreview ? 'Refresh Diff' : 'Inspect Code Diff'}</span>
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.6rem' }}>
+                  <input 
+                    type="text" 
+                    disabled={modals.task.mode === 'view'}
+                    placeholder="Git Repo (e.g. owner/repo or local path)..." 
+                    className="glass-input"
+                    value={taskForm.gitRepo}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, gitRepo: e.target.value }))}
+                    style={{ fontSize: '0.8rem' }}
+                  />
+                  <input 
+                    type="text" 
+                    disabled={modals.task.mode === 'view'}
+                    placeholder="Branch / Commit SHA (e.g. main)..." 
+                    className="glass-input"
+                    value={taskForm.gitCommitHash}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, gitCommitHash: e.target.value }))}
+                    style={{ fontSize: '0.8rem' }}
+                  />
+                </div>
+
+                {/* Git Code Diff Inspector Container */}
+                {showGitDiffPreview && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', background: '#0d1117', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '0.6rem', maxHeight: '180px', overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#8b949e', fontFamily: 'monospace' }}>
+                        Source Diff Viewer ({taskForm.gitCommitHash || 'HEAD'})
+                      </span>
+                      <button 
+                        type="button" 
+                        onClick={() => setShowGitDiffPreview(false)}
+                        style={{ background: 'none', border: 'none', color: '#8b949e', fontSize: '0.7rem', cursor: 'pointer' }}
+                      >
+                        Hide Diff
+                      </button>
+                    </div>
+                    <pre style={{ margin: 0, fontSize: '0.72rem', fontFamily: 'Consolas, Monaco, monospace', color: '#c9d1d9', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                      {gitDiffText}
+                    </pre>
+                  </div>
+                )}
               </div>
 
               {/* Checklists & Comments Sections (Only when editing or viewing existing tasks) */}
@@ -1815,7 +2562,32 @@ export default function App() {
 
                   {/* Comments Section */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Discussion & Comments</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Discussion & Comments</span>
+                      {(currentUser?.role === 'QUALITY_ASSURANCE' || currentUser?.role === 'WORKSPACE_ADMIN') && (
+                        <button 
+                          type="button" 
+                          onClick={handleAiAuditTask}
+                          disabled={isAuditingTask}
+                          style={{ 
+                            background: 'rgba(139, 92, 246, 0.1)', 
+                            border: '1px solid var(--accent-secondary)', 
+                            borderRadius: '6px', 
+                            color: 'var(--accent-secondary)', 
+                            fontSize: '0.72rem', 
+                            fontWeight: 600, 
+                            padding: '0.2rem 0.5rem', 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}
+                        >
+                          <Sparkles size={10} style={{ animation: isAuditingTask ? 'spin 1.5s linear infinite' : 'none' }} />
+                          <span>{isAuditingTask ? 'Auditing...' : 'Run AI QA Audit'}</span>
+                        </button>
+                      )}
+                    </div>
                     
                     {/* Comments Feed */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '180px', overflowY: 'auto', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--glass-border)', padding: '0.6rem', borderRadius: 'var(--radius-sm)' }}>
@@ -1829,9 +2601,7 @@ export default function App() {
                               {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', wordBreak: 'break-word' }}>
-                            {comment.text}
-                          </span>
+                          <MarkdownViewer text={comment.text} />
                         </div>
                       ))}
                       {activeTaskComments.length === 0 && (
@@ -1965,6 +2735,91 @@ export default function App() {
         </div>
       )}
 
+
     </div>
   );
+}
+
+// Custom Markdown Viewer component for professional markdown rendering in comments & descriptions
+function MarkdownViewer({ text, style }) {
+  if (!text) return null;
+
+  // Process code blocks fenced by ```
+  const parts = text.split(/```/g);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', ...style }}>
+      {parts.map((part, pIdx) => {
+        if (pIdx % 2 === 1) {
+          // Inside a ```code block```
+          const firstLineEnd = part.indexOf('\n');
+          const codeContent = firstLineEnd !== -1 ? part.slice(firstLineEnd + 1) : part;
+          return (
+            <pre key={pIdx} style={{ 
+              background: '#0d1117', 
+              border: '1px solid rgba(255, 255, 255, 0.1)', 
+              borderRadius: '6px', 
+              padding: '0.75rem', 
+              fontSize: '0.78rem', 
+              fontFamily: 'monospace', 
+              color: '#e6edf3', 
+              overflowX: 'auto',
+              whiteSpace: 'pre-wrap',
+              margin: '0.4rem 0'
+            }}>
+              <code>{codeContent.trim()}</code>
+            </pre>
+          );
+        }
+
+        // Regular Markdown lines
+        let normalizedText = part.replace(/([^\n])\s*(###|####|[-*]\s)/g, '$1\n$2');
+        const lines = normalizedText.split('\n');
+
+        return lines.map((line, idx) => {
+          let trimmed = line.trim();
+          if (!trimmed) return null;
+
+          if (trimmed.startsWith('###')) {
+            return (
+              <h4 key={`${pIdx}-${idx}`} style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-secondary)', marginTop: '0.5rem', marginBottom: '0.15rem' }}>
+                {renderBoldText(trimmed.replace(/^###\s*/, ''))}
+              </h4>
+            );
+          }
+          if (trimmed.startsWith('####')) {
+            return (
+              <h5 key={`${pIdx}-${idx}`} style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.35rem', marginBottom: '0.1rem' }}>
+                {renderBoldText(trimmed.replace(/^####\s*/, ''))}
+              </h5>
+            );
+          }
+          if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            return (
+              <div key={`${pIdx}-${idx}`} style={{ display: 'flex', gap: '0.4rem', alignItems: 'flex-start', fontSize: '0.8rem', color: 'var(--text-secondary)', paddingLeft: '0.4rem', lineHeight: '1.4' }}>
+                <span style={{ color: 'var(--accent-primary)', fontSize: '0.8rem' }}>•</span>
+                <span>{renderBoldText(trimmed.replace(/^[-*]\s+/, ''))}</span>
+              </div>
+            );
+          }
+          return (
+            <p key={`${pIdx}-${idx}`} style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.45' }}>
+              {renderBoldText(trimmed)}
+            </p>
+          );
+        });
+      })}
+    </div>
+  );
+}
+
+function renderBoldText(text) {
+  if (!text) return '';
+  const parts = text.split(/\*\*([^*]+)\*\*/g);
+  return parts.map((part, index) => {
+    if (index % 2 === 1) {
+      return <strong key={index} style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{part}</strong>;
+    }
+    return part;
+  });
 }
