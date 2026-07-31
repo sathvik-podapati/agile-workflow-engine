@@ -40,11 +40,11 @@ public class DataInitializer implements CommandLineRunner {
             List<User> existing = userRepository.findAll();
             for (User u : existing) {
                 if (u.getPassword() == null || u.getPassword().trim().isEmpty()) {
-                    if (u.getUsername().contains("Admin")) {
+                    if (u.getUsername().toLowerCase().contains("admin")) {
                         u.setPassword("admin123");
-                    } else if (u.getUsername().contains("Developer")) {
+                    } else if (u.getUsername().toLowerCase().contains("dev")) {
                         u.setPassword("dev123");
-                    } else if (u.getUsername().contains("QA")) {
+                    } else if (u.getUsername().toLowerCase().contains("qa")) {
                         u.setPassword("qa123");
                     } else {
                         u.setPassword("password123");
@@ -53,34 +53,34 @@ public class DataInitializer implements CommandLineRunner {
                 }
             }
         } else {
-            // Seed default users if table is empty
-            userRepository.save(new User("Sarah (Admin)", "sarah.admin@enterprise.com", Role.WORKSPACE_ADMIN, "admin123"));
-            userRepository.save(new User("David (Developer)", "david.dev@enterprise.com", Role.CONTRIBUTOR, "dev123"));
-            userRepository.save(new User("Alice (QA Auditor)", "alice.qa@enterprise.com", Role.QUALITY_ASSURANCE, "qa123"));
+            // Seed clean minimal demo users
+            userRepository.save(new User("Admin", "admin@company.com", Role.WORKSPACE_ADMIN, "admin123"));
+            userRepository.save(new User("Developer", "dev@company.com", Role.CONTRIBUTOR, "dev123"));
+            userRepository.save(new User("QA Auditor", "qa@company.com", Role.QUALITY_ASSURANCE, "qa123"));
         }
 
-        // 2. Seed default workspaces and columns if none exist
+        // 2. Seed clean workspace and columns if none exist
         if (workspaceRepository.count() == 0) {
-            User sarah = userRepository.findAll().stream()
+            User admin = userRepository.findAll().stream()
                     .filter(u -> u.getRole() == Role.WORKSPACE_ADMIN)
                     .findFirst()
-                    .orElseGet(() -> userRepository.save(new User("Sarah (Admin)", "sarah.admin@enterprise.com", Role.WORKSPACE_ADMIN, "admin123")));
+                    .orElseGet(() -> userRepository.save(new User("Admin", "admin@company.com", Role.WORKSPACE_ADMIN, "admin123")));
 
-            User david = userRepository.findAll().stream()
+            User dev = userRepository.findAll().stream()
                     .filter(u -> u.getRole() == Role.CONTRIBUTOR)
                     .findFirst()
-                    .orElseGet(() -> userRepository.save(new User("David (Developer)", "david.dev@enterprise.com", Role.CONTRIBUTOR, "dev123")));
+                    .orElseGet(() -> userRepository.save(new User("Developer", "dev@company.com", Role.CONTRIBUTOR, "dev123")));
 
-            User alice = userRepository.findAll().stream()
+            User qa = userRepository.findAll().stream()
                     .filter(u -> u.getRole() == Role.QUALITY_ASSURANCE)
                     .findFirst()
-                    .orElseGet(() -> userRepository.save(new User("Alice (QA Auditor)", "alice.qa@enterprise.com", Role.QUALITY_ASSURANCE, "qa123")));
+                    .orElseGet(() -> userRepository.save(new User("QA Auditor", "qa@company.com", Role.QUALITY_ASSURANCE, "qa123")));
 
-            // Create initial Workspace
-            Workspace workspace = new Workspace("Enterprise Sprint Board", sarah);
+            // Create initial clean Workspace
+            Workspace workspace = new Workspace("My Project Workspace", admin);
             Set<User> members = new HashSet<>();
-            members.add(david);
-            members.add(alice);
+            members.add(dev);
+            members.add(qa);
             workspace.setAssignedMembers(members);
             workspace = workspaceRepository.save(workspace);
 
@@ -93,22 +93,9 @@ public class DataInitializer implements CommandLineRunner {
             inProgress = columnBlockRepository.save(inProgress);
             done = columnBlockRepository.save(done);
 
-            // Create sample tasks
-            TaskCard t1 = new TaskCard("Database Schema Migrations", "Implement user mappings and join tables", Priority.HIGH, LocalDate.now().plusDays(10), 0, todo);
-            t1.setAssignee(david);
-
-            TaskCard t2 = new TaskCard("Frontend User Selector UI", "Add dropdown selector in header to switch active roles", Priority.MEDIUM, LocalDate.now().plusDays(5), 1, todo);
-            t2.setAssignee(david);
-
-            TaskCard t3 = new TaskCard("Enterprise Role-Based Guards", "Secure moveTask REST endpoints in service layer", Priority.HIGH, LocalDate.now().plusDays(3), 2, todo);
-
-            TaskCard t4 = new TaskCard("Audit Sprint Deliverables", "Perform QA reviews on recent changes", Priority.HIGH, LocalDate.now().minusDays(1), 0, inProgress);
-            t4.setAssignee(alice);
-
+            // Create 1 minimal sample task to get started
+            TaskCard t1 = new TaskCard("Sample Task: Drag card to In Progress", "Click card to edit details or assign team members", Priority.MEDIUM, LocalDate.now().plusDays(7), 0, todo);
             taskCardRepository.save(t1);
-            taskCardRepository.save(t2);
-            taskCardRepository.save(t3);
-            taskCardRepository.save(t4);
         }
     }
 }

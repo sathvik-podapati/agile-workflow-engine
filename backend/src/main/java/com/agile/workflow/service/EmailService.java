@@ -89,7 +89,7 @@ public class EmailService {
             "Hello %s,\n\n" +
             "Your submitted task '%s' in workspace '%s' was reviewed and REJECTED by QA Auditor (%s).\n\n" +
             "Action Taken:\n" +
-            "  - The task card has been automatically moved back to the 'To Do' column for necessary updates and fixes.\n\n" +
+            "  - The task card has been automatically moved back to the 'In Progress' column for necessary updates and fixes.\n\n" +
             "Please log in to review feedback and update your task: http://localhost:5173\n\n" +
             "Best regards,\nAgile Workflow Engine Team",
             assignee.getUsername(),

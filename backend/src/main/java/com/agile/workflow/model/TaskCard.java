@@ -46,6 +46,15 @@ public class TaskCard {
     @Column(name = "awaiting_qa_approval", nullable = false)
     private boolean awaitingQaApproval = false;
 
+    @Column(name = "git_repo")
+    private String gitRepo;
+
+    @Column(name = "git_branch")
+    private String gitBranch;
+
+    @Column(name = "git_commit_hash")
+    private String gitCommitHash;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "column_id", nullable = false)
     @JsonBackReference(value = "column-tasks")
@@ -181,5 +190,12 @@ public class TaskCard {
     public void setComments(List<Comment> comments) { this.comments = comments; }
     public List<Subtask> getSubtasks() { return subtasks; }
     public void setSubtasks(List<Subtask> subtasks) { this.subtasks = subtasks; }
+
+    public String getGitRepo() { return gitRepo; }
+    public void setGitRepo(String gitRepo) { this.gitRepo = gitRepo; }
+    public String getGitBranch() { return gitBranch; }
+    public void setGitBranch(String gitBranch) { this.gitBranch = gitBranch; }
+    public String getGitCommitHash() { return gitCommitHash; }
+    public void setGitCommitHash(String gitCommitHash) { this.gitCommitHash = gitCommitHash; }
 }
 

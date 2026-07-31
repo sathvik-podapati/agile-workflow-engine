@@ -106,6 +106,7 @@ public class TaskCardService {
             User assignee = userRepository.findById(task.getAssigneeId())
                 .orElseThrow(() -> new EntityNotFoundException("Assignee user not found"));
             task.setAssignee(assignee);
+            autoMoveToInProgressColumn(task);
         }
         
         TaskCard savedTask = taskCardRepository.save(task);
@@ -125,21 +126,22 @@ public class TaskCardService {
         TaskCard task = getTaskById(id, userId);
         User previousAssignee = task.getAssignee();
         
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        if (user.getRole() != Role.WORKSPACE_ADMIN) {
-            throw new com.agile.workflow.controller.AccessDeniedException("Only Workspace Admins can update task details");
-        }
+        // All workspace members (Admins, Developers, QA) can update task card details and Git repositories
 
         task.setTitle(details.getTitle());
         task.setDescription(details.getDescription());
         task.setPriority(details.getPriority());
         task.setDueDate(details.getDueDate());
+        task.setGitRepo(details.getGitRepo());
+        task.setGitBranch(details.getGitBranch());
+        task.setGitCommitHash(details.getGitCommitHash());
 
         if (details.getAssigneeId() != null) {
             User assignee = userRepository.findById(details.getAssigneeId())
                 .orElseThrow(() -> new EntityNotFoundException("Assignee user not found"));
             task.setAssignee(assignee);
+            // Automatically move assigned task card to "To Do" column
+            autoMoveToInProgressColumn(task);
         } else {
             task.setAssignee(null);
         }
@@ -156,6 +158,33 @@ public class TaskCardService {
         }
 
         return updatedTask;
+    }
+
+    private void autoMoveToInProgressColumn(TaskCard task) {
+        if (task.getColumnBlock() != null) {
+            ColumnBlock currentCol = columnBlockRepository.findById(task.getColumnBlock().getId()).orElse(null);
+            if (currentCol != null && currentCol.getWorkspace() != null) {
+                Long workspaceId = currentCol.getWorkspace().getId();
+                List<ColumnBlock> cols = columnBlockRepository.findByWorkspaceIdOrderBySequenceIndexAsc(workspaceId);
+                ColumnBlock inProgressCol = null;
+                for (ColumnBlock col : cols) {
+                    if (!col.isDeleted() && (col.getName().equalsIgnoreCase("In Progress") || col.getName().toLowerCase().contains("progress") || col.getName().toLowerCase().contains("doing"))) {
+                        inProgressCol = col;
+                        break;
+                    }
+                }
+                if (inProgressCol == null && cols.size() > 1) {
+                    inProgressCol = cols.get(1);
+                } else if (inProgressCol == null && !cols.isEmpty()) {
+                    inProgressCol = cols.get(0);
+                }
+                if (inProgressCol != null && !currentCol.getId().equals(inProgressCol.getId())) {
+                    task.setColumnBlock(inProgressCol);
+                    int targetCount = (int) inProgressCol.getTasks().stream().filter(t -> !t.isDeleted()).count();
+                    task.setSequenceIndex(targetCount);
+                }
+            }
+        }
     }
 
     public void deleteTask(Long id, Long userId) {
@@ -434,23 +463,25 @@ public class TaskCardService {
         ColumnBlock currentColumn = task.getColumnBlock();
         Workspace workspace = currentColumn.getWorkspace();
 
-        // Find To Do column in the workspace
+        // Find In Progress column in the workspace (or fallback if not found)
         List<ColumnBlock> columns = columnBlockRepository.findByWorkspaceIdOrderBySequenceIndexAsc(workspace.getId());
-        ColumnBlock todoCol = null;
+        ColumnBlock inProgressCol = null;
         for (ColumnBlock col : columns) {
-            if (!col.isDeleted() && col.getName().trim().toLowerCase().equals("to do")) {
-                todoCol = col;
+            if (!col.isDeleted() && (col.getName().trim().equalsIgnoreCase("In Progress") || col.getName().toLowerCase().contains("progress") || col.getName().toLowerCase().contains("doing"))) {
+                inProgressCol = col;
                 break;
             }
         }
-        if (todoCol == null) {
-            throw new EntityNotFoundException("To Do column not found in workspace");
+        if (inProgressCol == null && columns.size() > 1) {
+            inProgressCol = columns.get(1);
+        } else if (inProgressCol == null && !columns.isEmpty()) {
+            inProgressCol = columns.get(0);
         }
 
         // Set pending flag to false
         task.setAwaitingQaApproval(false);
 
-        // Move task to To Do column (at the end)
+        // Move task to In Progress column (at the end)
         List<TaskCard> allSource = taskCardRepository.findByColumnBlockIdOrderBySequenceIndexAsc(currentColumn.getId());
         List<TaskCard> sourceTasks = new java.util.ArrayList<>();
         for (TaskCard t : allSource) {
@@ -473,26 +504,26 @@ public class TaskCardService {
         }
         taskCardRepository.saveAll(sourceTasks);
 
-        // Fetch active tasks in To Do and add to end
-        List<TaskCard> allTodo = taskCardRepository.findByColumnBlockIdOrderBySequenceIndexAsc(todoCol.getId());
-        List<TaskCard> todoTasks = new java.util.ArrayList<>();
-        for (TaskCard t : allTodo) {
-            if (!t.isDeleted()) todoTasks.add(t);
+        // Fetch active tasks in In Progress and add to end
+        List<TaskCard> allTarget = taskCardRepository.findByColumnBlockIdOrderBySequenceIndexAsc(inProgressCol.getId());
+        List<TaskCard> targetTasks = new java.util.ArrayList<>();
+        for (TaskCard t : allTarget) {
+            if (!t.isDeleted()) targetTasks.add(t);
         }
 
-        task.setColumnBlock(todoCol);
-        task.setSequenceIndex(todoTasks.size());
+        task.setColumnBlock(inProgressCol);
+        task.setSequenceIndex(targetTasks.size());
         taskCardRepository.save(task);
 
-        // Refresh To Do sequence
-        todoTasks.add(task);
-        for (int i = 0; i < todoTasks.size(); i++) {
-            todoTasks.get(i).setSequenceIndex(i);
+        // Refresh In Progress sequence
+        targetTasks.add(task);
+        for (int i = 0; i < targetTasks.size(); i++) {
+            targetTasks.get(i).setSequenceIndex(i);
         }
-        taskCardRepository.saveAll(todoTasks);
+        taskCardRepository.saveAll(targetTasks);
 
         // Notify Developer and Admin via App Notification
-        String msg = String.format("Task '%s' has been rejected by %s and sent back to To Do.", task.getTitle(), user.getUsername());
+        String msg = String.format("Task '%s' has been rejected by QA (%s) and returned to In Progress for developer fixes.", task.getTitle(), user.getUsername());
         if (task.getAssignee() != null) {
             notificationService.createNotification(msg, task.getAssignee().getId());
             // Dispatch email notification to assigned Developer
