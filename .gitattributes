@@ -1,4 +1,0 @@
-# Configure GitHub Linguist language detection
-*.ps1 linguist-documentation
-*.ps1 linguist-vendored
-*.css linguist-documentation=false
