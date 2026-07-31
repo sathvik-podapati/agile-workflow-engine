@@ -365,7 +365,9 @@ export default function App() {
     let reconnectTimeout;
 
     const connectWebSocket = () => {
-      const wsUrl = `ws://${window.location.hostname}:8085/ws-updates`;
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `${window.location.hostname}:8085` : window.location.host;
+      const wsUrl = `${wsProtocol}//${wsHost}/ws-updates`;
       ws = new WebSocket(wsUrl);
 
       ws.onmessage = (event) => {
