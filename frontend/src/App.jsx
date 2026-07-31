@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 
 // ----------------------------------------------------
-// Interactive Visual Analytics Glassmorphic SVG Components
+// Agile Workflow Engine - React Frontend App
+// Config: Point frontend to live Render backend API
 // ----------------------------------------------------
 function RadialProgressGauge({ percentage }) {
   const radius = 52;
