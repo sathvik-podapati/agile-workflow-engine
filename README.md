@@ -1,102 +1,99 @@
-# Agile Workflow Engine 🚀
+# Agile Workflow Engine ⚡
 
-A full-stack, enterprise-grade Agile Kanban Workspace platform built with **React (Vite)** on the frontend and **Spring Boot (Java 17)** on the backend. Designed with glassmorphism aesthetics, workspace isolation, role-based access control (RBAC), live WebSocket updates, and email OTP security.
+A full-stack, enterprise-grade Agile Kanban Workspace platform built with **Spring Boot 3 (Java 17)** on the backend and **React 18 (Vite)** on the frontend. Featuring a warm amber **Glassmorphism UI/UX**, workspace isolation, strict Role-Based Access Control (RBAC), interactive SVG analytics, AI QA Code Audit integration, and real-time WebSocket state synchronization.
 
 ---
 
 ## 🛠️ Technology Stack & Architecture
 
-*   **Frontend**: React, Vite, Custom HSL/HEX Design System, Lucide Icons, Native WebSockets
-*   **Backend**: Spring Boot 3, Spring Data JPA, MySQL (with H2 fallback), Hibernate, WebSocket Handler
-*   **Database**: MySQL 8 / H2 Persistent Database
-*   **DevOps**: Docker, Docker Compose, Nginx, PowerShell Automation
+- **Frontend**: React 18, Vite, Warm Amber Glassmorphism Design System, Lucide Icons, Native WebSocket Client, Inline SVG Data Visualizations
+- **Backend**: Spring Boot 3.4, Spring Data JPA, Hibernate ORM, MySQL 8 / H2 Persistent Database, WebSocket Message Broker, JavaMailSender
+- **DevOps & Containers**: Docker, Docker Compose, Multi-Stage Nginx Build, Maven
 
 ---
 
-## 🎨 Custom Design Palette
+## ✨ Core Capabilities & Features
 
-*   **Background**: `#0F1117`
-*   **Sidebar & Columns**: `#171923`
-*   **Cards & Inputs**: `#1F2430`
-*   **Primary Accent**: `#5B8CFF`
-*   **Secondary Accent**: `#8B5CF6`
-*   **Success Tone**: `#22C55E`
-*   **Warning Alert**: `#F59E0B`
-*   **Danger Alert**: `#EF4444`
-*   **Text Primary**: `#F8FAFC`
-*   **Text Secondary**: `#94A3B8`
+### 🎨 1. Warm Glassmorphic Design System
+- Modern dark-mode aesthetic with frosted glass panels (`backdrop-filter: blur`), subtle amber glows (`#E8A33D`), translucent card surfaces, and responsive edge-to-edge column layouts.
+- Interactive SVG Analytics components:
+  - **Radial Progress Ring Gauge**: Real-time sprint completion percentage indicator.
+  - **Status Donut Chart**: Dynamic task breakdown (To Do, In Progress, Done).
+  - **Sprint Burndown Curve Chart**: Cubic Bezier velocity trajectory comparing actual vs. ideal burn down.
+
+### 🛡️ 2. Role-Based Access Control (RBAC) & Governance
+- **Workspace Admin**: Full board authority, custom column management, member invitations, and task administration.
+- **Contributor (Developer)**: Can move assigned task cards across workflow states (**To Do** ➔ **In Progress** ➔ **Done**).
+- **Quality Assurance (QA Auditor)**: Reviews cards in **Done**; can **Approve** (finalize) or **Reject** (automatically returns task to **To Do** while preserving original assignee and state).
+
+### 🤖 3. AI QA Auditor & Git Integration
+- Integrates with Gemini AI service to audit task diffs, review code changes against requirements, and generate automated subtask checklists.
+
+### 🔄 4. Real-Time WebSocket Synchronization
+- Live multi-user state synchronization over WebSockets. Task moves, column modifications, and status changes instantly update across all connected client browsers.
 
 ---
 
-## ✨ Enterprise Capabilities
+## 🔑 Demo Login Credentials
 
-### 1. Workspace Isolation & Sharing
-*   Multi-tenant architecture: Workspaces are private by default.
-*   Workspace admins can invite members by username/role to grant explicit access.
+For quick evaluation, pre-configured demo user accounts are provided:
 
-### 2. Strict Role-Based Access Control (RBAC)
-*   **Workspace Admin**: Full board management, column editing, member invitation, user creation/deletion.
-*   **Contributor (Developer)**: Can move assigned task cards between **To Do**, **In Progress**, and **Done**.
-*   **Quality Assurance (QA)**: Review cards in **Done**; can **Approve** (finalize) or **Reject** (send back to **To Do**).
+| Role | Username | Email | Password |
+| :--- | :--- | :--- | :--- |
+| **Workspace Admin** | `Admin` | `admin@company.com` | `admin123` |
+| **Developer** | `Developer` | `dev@company.com` | `dev123` |
+| **QA Auditor** | `QA Auditor` | `qa@company.com` | `qa123` |
 
-### 3. Live WebSocket Updates
-*   Real-time multi-user synchronization over `/ws-updates` WebSocket endpoints.
-*   Automatic client board refresh when any team member modifies task positions or statuses.
-
-### 4. Email OTP Password Reset
-*   Two-step security verification for password changes using a 6-digit OTP generated via `POST /api/v1/users/send-otp`.
-
-### 5. Smart User Soft Deletion
-*   Deleting a user removes them from active lists, clears task assignments, and releases unique email/username constraints to allow re-registration with the same email address.
+*Note: New accounts can also be created dynamically via the **Register Account** screen.*
 
 ---
 
 ## 🚀 Quick Start & Deployment
 
-### Option A: 1-Click Launch (Windows)
-Run the startup script from PowerShell:
-```powershell
-.\start.ps1
-```
+### Option A: Local Execution
 
-### Option B: Docker Compose
-Build and run the full stack via Docker:
-```bash
-docker-compose up --build
-```
-*   **Frontend**: [http://localhost:5173](http://localhost:5173)
-*   **Backend**: [http://localhost:8085](http://localhost:8085)
-
-### Option C: Manual Setup
-
-#### 1. Backend (Spring Boot)
+#### 1. Start Backend (Spring Boot)
 ```bash
 cd backend
 mvn spring-boot:run
 ```
+*Backend runs on: `http://localhost:8085`*
 
-#### 2. Frontend (React + Vite)
+#### 2. Start Frontend (React + Vite)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+*Frontend runs on: `http://localhost:5173`*
 
 ---
 
-## 🧪 E2E Verification Suite
+### Option B: Multi-Container Docker Compose
 
-Run the automated integration test script:
-```powershell
-.\verify_api.ps1
+Deploy the complete stack (MySQL 8 + Spring Boot API + React Nginx SPA) in one command:
+
+```bash
+docker-compose up --build
 ```
+- **Frontend SPA**: `http://localhost:5173`
+- **Backend API**: `http://localhost:8085`
+- **Database**: `localhost:3306`
 
 ---
 
-## 👥 Seed Accounts
+## 📁 Repository Structure
 
-| Role | Username | Password | Email |
-| :--- | :--- | :--- | :--- |
-| **Workspace Admin** | `Sarah (Admin)` | `admin123` | `sarah.admin@enterprise.com` |
-| **Developer** | `David (Developer)` | `dev123` | `david.dev@enterprise.com` |
-| **QA Auditor** | `Alice (QA Auditor)` | `qa123` | `alice.qa@enterprise.com` |
+```
+agile-workflow-engine/
+├── backend/                  # Spring Boot Java 17 Application
+│   ├── src/main/java/        # Controllers, Services, Models, Repositories
+│   ├── src/main/resources/   # Application Configuration (application.yml)
+│   └── Dockerfile            # Multi-stage Maven/Java Dockerfile
+├── frontend/                 # React SPA Application
+│   ├── src/                  # Components, Hooks, Glassmorphic Design Tokens
+│   └── Dockerfile            # Multi-stage Node/Nginx Dockerfile
+├── docker-compose.yml        # Docker Multi-Container Orchestration
+├── README.md                 # Project Overview & Quick Start
+└── .gitignore                # Git Exclusions
+```
