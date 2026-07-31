@@ -35,27 +35,47 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // 1. Ensure existing users have passwords initialized
-        if (userRepository.count() > 0) {
-            List<User> existing = userRepository.findAll();
-            for (User u : existing) {
-                if (u.getPassword() == null || u.getPassword().trim().isEmpty()) {
-                    if (u.getUsername().toLowerCase().contains("admin")) {
-                        u.setPassword("admin123");
-                    } else if (u.getUsername().toLowerCase().contains("dev")) {
-                        u.setPassword("dev123");
-                    } else if (u.getUsername().toLowerCase().contains("qa")) {
-                        u.setPassword("qa123");
-                    } else {
-                        u.setPassword("password123");
-                    }
-                    userRepository.save(u);
-                }
+        // 1. Safely rename legacy demo users (Sarah, David, Alice) in place to avoid foreign key errors
+        List<User> existing = userRepository.findAll();
+        for (User u : existing) {
+            if (u.getUsername().contains("Sarah")) {
+                u.setUsername("Admin");
+                u.setEmail("admin@company.com");
+                u.setRole(Role.WORKSPACE_ADMIN);
+                u.setPassword("admin123");
+                userRepository.save(u);
+            } else if (u.getUsername().contains("David")) {
+                u.setUsername("Developer");
+                u.setEmail("dev@company.com");
+                u.setRole(Role.CONTRIBUTOR);
+                u.setPassword("dev123");
+                userRepository.save(u);
+            } else if (u.getUsername().contains("Alice")) {
+                u.setUsername("QA Auditor");
+                u.setEmail("qa@company.com");
+                u.setRole(Role.QUALITY_ASSURANCE);
+                u.setPassword("qa123");
+                userRepository.save(u);
             }
-        } else {
-            // Seed clean minimal demo users
+        }
+
+        // Rename legacy workspaces if present
+        List<Workspace> legacyWorkspaces = workspaceRepository.findAll();
+        for (Workspace w : legacyWorkspaces) {
+            if (w.getName().contains("Audit & Launch") || w.getName().contains("Enterprise Sprint")) {
+                w.setName("My Project Workspace");
+                workspaceRepository.save(w);
+            }
+        }
+
+        // Seed clean minimal demo users if missing
+        if (userRepository.findAll().stream().noneMatch(u -> u.getRole() == Role.WORKSPACE_ADMIN)) {
             userRepository.save(new User("Admin", "admin@company.com", Role.WORKSPACE_ADMIN, "admin123"));
+        }
+        if (userRepository.findAll().stream().noneMatch(u -> u.getRole() == Role.CONTRIBUTOR)) {
             userRepository.save(new User("Developer", "dev@company.com", Role.CONTRIBUTOR, "dev123"));
+        }
+        if (userRepository.findAll().stream().noneMatch(u -> u.getRole() == Role.QUALITY_ASSURANCE)) {
             userRepository.save(new User("QA Auditor", "qa@company.com", Role.QUALITY_ASSURANCE, "qa123"));
         }
 
