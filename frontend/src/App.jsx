@@ -325,7 +325,18 @@ export default function App() {
     loadUsers();
     const saved = localStorage.getItem("activeUser");
     if (saved) {
-      setCurrentUser(JSON.parse(saved));
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.username && (parsed.username.includes("Sarah") || parsed.username.includes("David") || parsed.username.includes("Alice"))) {
+          localStorage.removeItem("activeUser");
+          setCurrentUser(null);
+        } else {
+          setCurrentUser(parsed);
+        }
+      } catch (e) {
+        localStorage.removeItem("activeUser");
+        setCurrentUser(null);
+      }
     }
   }, []);
 
@@ -1289,12 +1300,10 @@ export default function App() {
                 <option value="">Select Enterprise User...</option>
                 {users
                   .filter(u => u.username !== 'AI Auditor')
-                  .filter(u => !u.username.includes('mail_dev_'))
-                  .filter(u => u.username !== 'user_reused')
-                  .filter(u => u.username !== 'nani')
+                  .filter(u => !u.deleted)
                   .map(u => (
                     <option key={u.id} value={u.username} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-                      {u.username} ({u.role.replace('WORKSPACE_', '').replace('_', ' ')})
+                      {u.username} ({u.role ? u.role.replace('WORKSPACE_', '').replace('_', ' ') : 'USER'})
                     </option>
                   ))}
               </select>
