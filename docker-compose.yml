@@ -1,20 +1,42 @@
 version: '3.8'
 
 services:
+  mysqldb:
+    image: mysql:8.0
+    container_name: agile_mysql_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: agile_workflow_db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: agile_backend_app
     ports:
       - "8085:8085"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysqldb:3306/agile_workflow_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    depends_on:
+      - mysqldb
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: agile_frontend_app
     ports:
       - "5173:80"
     depends_on:
       - backend
+
+volumes:
+  mysql_data:
