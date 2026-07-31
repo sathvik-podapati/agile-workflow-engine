@@ -1,6 +1,6 @@
-# Agile Workflow Engine ⚡
+# Agile Workflow Engine
 
-A full-stack, enterprise-grade Agile Kanban Workspace platform built with **Spring Boot 3 (Java 17)** on the backend and **React 18 (Vite)** on the frontend. Featuring a warm amber **Glassmorphism UI/UX**, workspace isolation, strict Role-Based Access Control (RBAC), interactive SVG analytics, AI QA Code Audit integration, and real-time WebSocket state synchronization.
+An enterprise-grade, real-time Agile workflow management system built with **Spring Boot** and **React (Vite)**. Featuring a warm amber **Glassmorphism UI/UX**, workspace isolation, strict Role-Based Access Control (RBAC), interactive SVG analytics, AI QA Code Audit integration, and real-time WebSocket state synchronization.
 
 ---
 
