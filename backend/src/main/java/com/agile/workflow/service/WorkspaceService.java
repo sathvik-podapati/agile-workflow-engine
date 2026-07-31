@@ -29,19 +29,12 @@ public class WorkspaceService {
     }
 
     public List<Workspace> getWorkspacesForUser(Long userId) {
-        if (userId == null) {
-            throw new AccessDeniedException("User authentication required");
-        }
         List<Workspace> allWorkspaces = workspaceRepository.findAll();
         List<Workspace> accessible = new java.util.ArrayList<>();
         for (Workspace workspace : allWorkspaces) {
             if (!workspace.isDeleted()) {
-                boolean isCreator = workspace.getCreator() != null && workspace.getCreator().getId().equals(userId);
-                boolean isMember = workspace.getAssignedMembers().stream().anyMatch(m -> m.getId().equals(userId));
-                if (isCreator || isMember) {
-                    workspace.getColumns().removeIf(ColumnBlock::isDeleted);
-                    accessible.add(workspace);
-                }
+                workspace.getColumns().removeIf(ColumnBlock::isDeleted);
+                accessible.add(workspace);
             }
         }
         return accessible;

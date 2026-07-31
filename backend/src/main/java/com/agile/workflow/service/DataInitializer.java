@@ -92,42 +92,64 @@ public class DataInitializer implements CommandLineRunner {
                 .filter(u -> u.getRole() == Role.QUALITY_ASSURANCE)
                 .findFirst().orElse(null);
 
-        // 2. Seed clean workspace and columns if none exist
-        if (workspaceRepository.count() == 0) {
-            // Create initial clean Workspace
-            Workspace workspace = new Workspace("My Project Workspace", admin);
-            Set<User> members = new HashSet<>();
-            if (dev != null) members.add(dev);
-            if (qa != null) members.add(qa);
-            workspace.setAssignedMembers(members);
-            workspace = workspaceRepository.save(workspace);
-
-            // Create default columns
-            ColumnBlock todo = new ColumnBlock("To Do", 0, workspace);
-            ColumnBlock inProgress = new ColumnBlock("In Progress", 1, workspace);
-            ColumnBlock done = new ColumnBlock("Done", 2, workspace);
-
-            columnBlockRepository.save(todo);
-            columnBlockRepository.save(inProgress);
-            columnBlockRepository.save(done);
+        // 2. Consolidate to 1 single clean active workspace
+        List<Workspace> allWorkspaces = workspaceRepository.findAll();
+        Workspace ws;
+        if (allWorkspaces.isEmpty()) {
+            ws = new Workspace("My Project Workspace", admin);
+        } else {
+            ws = allWorkspaces.get(0);
+            ws.setName("My Project Workspace");
+            ws.setCreator(admin);
+            ws.setDeleted(false);
+            // Delete extra duplicate workspaces
+            for (int i = 1; i < allWorkspaces.size(); i++) {
+                try {
+                    workspaceRepository.delete(allWorkspaces.get(i));
+                } catch (Exception ignored) {}
+            }
         }
 
-        // Add 2 clean sample cards for demo if no cards exist
-        if (taskCardRepository.count() == 0) {
-            List<ColumnBlock> cols = columnBlockRepository.findAll();
-            if (!cols.isEmpty()) {
-                ColumnBlock todoCol = cols.stream().filter(c -> "To Do".equalsIgnoreCase(c.getName())).findFirst().orElse(cols.get(0));
-                ColumnBlock inProgressCol = cols.stream().filter(c -> "In Progress".equalsIgnoreCase(c.getName())).findFirst().orElse(cols.size() > 1 ? cols.get(1) : cols.get(0));
+        Set<User> members = new HashSet<>();
+        if (admin != null) members.add(admin);
+        if (dev != null) members.add(dev);
+        if (qa != null) members.add(qa);
+        ws.setAssignedMembers(members);
+        ws = workspaceRepository.save(ws);
 
-                TaskCard t1 = new TaskCard("Project Setup & Architecture", "Configure Spring Boot REST backend and React frontend workspace", Priority.HIGH, LocalDate.now().plusDays(5), 0, todoCol);
-                t1.setAssignee(dev);
+        List<ColumnBlock> cols = columnBlockRepository.findByWorkspaceIdOrderBySequenceIndexAsc(ws.getId());
+        for (ColumnBlock c : cols) {
+            c.setDeleted(false);
+            columnBlockRepository.save(c);
+        }
+        cols = columnBlockRepository.findByWorkspaceIdOrderBySequenceIndexAsc(ws.getId())
+                .stream().filter(c -> !c.isDeleted()).toList();
 
-                TaskCard t2 = new TaskCard("Implement Role-Based Access", "Role-based guards for Admin, Developer, and QA Auditor", Priority.MEDIUM, LocalDate.now().plusDays(3), 0, inProgressCol);
-                t2.setAssignee(dev);
+        if (cols.isEmpty()) {
+            ColumnBlock todo = columnBlockRepository.save(new ColumnBlock("To Do", 0, ws));
+            ColumnBlock inProgress = columnBlockRepository.save(new ColumnBlock("In Progress", 1, ws));
+            ColumnBlock done = columnBlockRepository.save(new ColumnBlock("Done", 2, ws));
+            cols = List.of(todo, inProgress, done);
+        }
 
-                taskCardRepository.save(t1);
-                taskCardRepository.save(t2);
-            }
+        ColumnBlock todoCol = cols.stream().filter(c -> "To Do".equalsIgnoreCase(c.getName())).findFirst().orElse(cols.get(0));
+        ColumnBlock inProgressCol = cols.stream().filter(c -> "In Progress".equalsIgnoreCase(c.getName())).findFirst().orElse(cols.size() > 1 ? cols.get(1) : cols.get(0));
+
+        // Always re-seed 2 clean sample cards for this workspace if less than 2 exist
+        List<TaskCard> existingTasks = taskCardRepository.findByColumnBlockWorkspaceId(ws.getId())
+                .stream().filter(t -> !t.isDeleted()).toList();
+
+        if (existingTasks.size() < 2) {
+            taskCardRepository.deleteAll(existingTasks);
+
+            TaskCard t1 = new TaskCard("Project Setup & Architecture", "Configure Spring Boot REST backend and React frontend workspace", Priority.HIGH, LocalDate.now().plusDays(5), 0, todoCol);
+            t1.setAssignee(dev);
+
+            TaskCard t2 = new TaskCard("Implement Role-Based Access", "Role-based guards for Admin, Developer, and QA Auditor", Priority.MEDIUM, LocalDate.now().plusDays(3), 0, inProgressCol);
+            t2.setAssignee(dev);
+
+            taskCardRepository.save(t1);
+            taskCardRepository.save(t2);
         }
     }
 }
