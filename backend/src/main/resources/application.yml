@@ -1,5 +1,5 @@
 server:
-  port: 8085
+  port: ${PORT:8085}
   servlet:
     context-path: /
 
@@ -8,10 +8,10 @@ spring:
     name: agile-workflow-engine
 
   datasource:
-    url: jdbc:mysql://localhost:3306/agile_workflow_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: S@thvik18
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:agile_workflow_db;DB_CLOSE_DELAY=-1;MODE=MySQL}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
@@ -26,7 +26,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.MySQLDialect
 
   mail:
     host: smtp.gmail.com
