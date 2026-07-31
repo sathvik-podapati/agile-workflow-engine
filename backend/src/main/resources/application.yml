@@ -1,3 +1,4 @@
+# Agile Workflow Engine - Spring Boot Backend Configuration
 server:
   port: ${PORT:8085}
   servlet:
