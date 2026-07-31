@@ -6,8 +6,7 @@ import {
 } from 'lucide-react';
 
 // ----------------------------------------------------
-// Agile Workflow Engine - React Frontend App
-// Config: Point frontend to live Render backend API
+// Agile Workflow Engine - Modern React SPA Frontend
 // ----------------------------------------------------
 function RadialProgressGauge({ percentage }) {
   const radius = 52;
