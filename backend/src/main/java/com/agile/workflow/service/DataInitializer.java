@@ -1,10 +1,7 @@
 package com.agile.workflow.service;
 
 import com.agile.workflow.model.*;
-import com.agile.workflow.repository.ColumnBlockRepository;
-import com.agile.workflow.repository.TaskCardRepository;
-import com.agile.workflow.repository.UserRepository;
-import com.agile.workflow.repository.WorkspaceRepository;
+import com.agile.workflow.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -21,21 +18,27 @@ public class DataInitializer implements CommandLineRunner {
     private final WorkspaceRepository workspaceRepository;
     private final ColumnBlockRepository columnBlockRepository;
     private final TaskCardRepository taskCardRepository;
+    private final SubtaskRepository subtaskRepository;
+    private final CommentRepository commentRepository;
 
     @Autowired
     public DataInitializer(UserRepository userRepository, 
                            WorkspaceRepository workspaceRepository,
                            ColumnBlockRepository columnBlockRepository, 
-                           TaskCardRepository taskCardRepository) {
+                           TaskCardRepository taskCardRepository,
+                           SubtaskRepository subtaskRepository,
+                           CommentRepository commentRepository) {
         this.userRepository = userRepository;
         this.workspaceRepository = workspaceRepository;
         this.columnBlockRepository = columnBlockRepository;
         this.taskCardRepository = taskCardRepository;
+        this.subtaskRepository = subtaskRepository;
+        this.commentRepository = commentRepository;
     }
 
     @Override
     public void run(String... args) throws Exception {
-        // 1. Safely rename legacy demo users (Sarah, David, Alice) in place to avoid foreign key errors
+        // 1. Safely rename legacy demo users (Sarah, David, Alice) in place
         List<User> existing = userRepository.findAll();
         for (User u : existing) {
             if (u.getUsername().contains("Sarah")) {
@@ -68,6 +71,11 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
 
+        // Purge all legacy task cards, subtasks, and comments to clean up demo cards
+        subtaskRepository.deleteAll();
+        commentRepository.deleteAll();
+        taskCardRepository.deleteAll();
+
         // Seed clean minimal demo users if missing
         if (userRepository.findAll().stream().noneMatch(u -> u.getRole() == Role.WORKSPACE_ADMIN)) {
             userRepository.save(new User("Admin", "admin@company.com", Role.WORKSPACE_ADMIN, "admin123"));
@@ -79,28 +87,23 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(new User("QA Auditor", "qa@company.com", Role.QUALITY_ASSURANCE, "qa123"));
         }
 
+        User admin = userRepository.findAll().stream()
+                .filter(u -> u.getRole() == Role.WORKSPACE_ADMIN)
+                .findFirst().orElse(null);
+        User dev = userRepository.findAll().stream()
+                .filter(u -> u.getRole() == Role.CONTRIBUTOR)
+                .findFirst().orElse(null);
+        User qa = userRepository.findAll().stream()
+                .filter(u -> u.getRole() == Role.QUALITY_ASSURANCE)
+                .findFirst().orElse(null);
+
         // 2. Seed clean workspace and columns if none exist
         if (workspaceRepository.count() == 0) {
-            User admin = userRepository.findAll().stream()
-                    .filter(u -> u.getRole() == Role.WORKSPACE_ADMIN)
-                    .findFirst()
-                    .orElseGet(() -> userRepository.save(new User("Admin", "admin@company.com", Role.WORKSPACE_ADMIN, "admin123")));
-
-            User dev = userRepository.findAll().stream()
-                    .filter(u -> u.getRole() == Role.CONTRIBUTOR)
-                    .findFirst()
-                    .orElseGet(() -> userRepository.save(new User("Developer", "dev@company.com", Role.CONTRIBUTOR, "dev123")));
-
-            User qa = userRepository.findAll().stream()
-                    .filter(u -> u.getRole() == Role.QUALITY_ASSURANCE)
-                    .findFirst()
-                    .orElseGet(() -> userRepository.save(new User("QA Auditor", "qa@company.com", Role.QUALITY_ASSURANCE, "qa123")));
-
             // Create initial clean Workspace
             Workspace workspace = new Workspace("My Project Workspace", admin);
             Set<User> members = new HashSet<>();
-            members.add(dev);
-            members.add(qa);
+            if (dev != null) members.add(dev);
+            if (qa != null) members.add(qa);
             workspace.setAssignedMembers(members);
             workspace = workspaceRepository.save(workspace);
 
@@ -112,9 +115,13 @@ public class DataInitializer implements CommandLineRunner {
             todo = columnBlockRepository.save(todo);
             inProgress = columnBlockRepository.save(inProgress);
             done = columnBlockRepository.save(done);
+        }
 
-            // Create 1 minimal sample task to get started
-            TaskCard t1 = new TaskCard("Sample Task: Drag card to In Progress", "Click card to edit details or assign team members", Priority.MEDIUM, LocalDate.now().plusDays(7), 0, todo);
+        // Add 1 minimal sample card into To Do column
+        List<ColumnBlock> cols = columnBlockRepository.findAll();
+        if (!cols.isEmpty()) {
+            ColumnBlock targetCol = cols.stream().filter(c -> "To Do".equalsIgnoreCase(c.getName())).findFirst().orElse(cols.get(0));
+            TaskCard t1 = new TaskCard("Sample Task: Drag card to In Progress", "Click card to edit details or assign team members", Priority.MEDIUM, LocalDate.now().plusDays(7), 0, targetCol);
             taskCardRepository.save(t1);
         }
     }
