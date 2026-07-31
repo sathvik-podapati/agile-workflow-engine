@@ -117,13 +117,27 @@ public class DataInitializer implements CommandLineRunner {
         ws.setAssignedMembers(members);
         ws = workspaceRepository.save(ws);
 
-        List<ColumnBlock> cols = columnBlockRepository.findByWorkspaceIdOrderBySequenceIndexAsc(ws.getId());
-        for (ColumnBlock c : cols) {
-            c.setDeleted(false);
-            columnBlockRepository.save(c);
+        List<ColumnBlock> allCols = columnBlockRepository.findByWorkspaceIdOrderBySequenceIndexAsc(ws.getId());
+        java.util.Map<String, ColumnBlock> uniqueColsMap = new java.util.LinkedHashMap<>();
+        for (ColumnBlock c : allCols) {
+            String key = c.getName().trim().toUpperCase();
+            if (!uniqueColsMap.containsKey(key)) {
+                c.setDeleted(false);
+                columnBlockRepository.save(c);
+                uniqueColsMap.put(key, c);
+            } else {
+                List<TaskCard> cardsInDup = taskCardRepository.findByColumnBlockIdOrderBySequenceIndexAsc(c.getId());
+                ColumnBlock primary = uniqueColsMap.get(key);
+                for (TaskCard card : cardsInDup) {
+                    card.setColumnBlock(primary);
+                    taskCardRepository.save(card);
+                }
+                try {
+                    columnBlockRepository.delete(c);
+                } catch (Exception ignored) {}
+            }
         }
-        cols = columnBlockRepository.findByWorkspaceIdOrderBySequenceIndexAsc(ws.getId())
-                .stream().filter(c -> !c.isDeleted()).toList();
+        List<ColumnBlock> cols = new java.util.ArrayList<>(uniqueColsMap.values());
 
         if (cols.isEmpty()) {
             ColumnBlock todo = columnBlockRepository.save(new ColumnBlock("To Do", 0, ws));
